@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Samsung Phone OS</title>
+  <title>Fake Phone OS</title>
   <style>
     body {
       margin: 0;
@@ -173,5 +173,3 @@
   </script>
 </body>
 </html>
-
-
