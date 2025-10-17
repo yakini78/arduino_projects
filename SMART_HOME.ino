@@ -1,3 +1,5 @@
+
+//wiginagriff@gmail.com
 #include <Wire.h>
 <#include <LiquidCrystal_I2C.h>
 #include <DHT.h>
@@ -191,3 +193,4 @@ void loop() {
 
   delay(2000); // Wait before next update
 }
+
