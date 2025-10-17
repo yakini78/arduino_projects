@@ -1,15 +1,17 @@
-const int relayPin = 7; // Connect relay signal pin to Arduino digital pin 7
+
+#define fanPin 9
 
 void setup() {
-  pinMode(relayPin, OUTPUT); // Set the relay pin as an output
+  
+  Serial.begin(9600);
+
+
+  pinMode (fanPin, OUTPUT);
 }
-
 void loop() {
-  // Turn the fan on for 5 seconds
-  digitalWrite(relayPin, HIGH); // Send HIGH signal to the relay to turn it on (or LOW depending on your relay module)
-  delay(5000);
+ digitalWrite(fanPin, HIGH);
+ delay(100);
+ digitalWrite(fanPin, LOW);
+ delay(100);
 
-  // Turn the fan off for 5 seconds
-  digitalWrite(relayPin, LOW); // Send LOW signal to the relay to turn it off (or HIGH)
-  delay(5000);
 }
