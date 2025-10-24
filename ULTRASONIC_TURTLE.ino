@@ -1,116 +1,166 @@
 #include <Servo.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_LEDBackpack.h>
+
+// Motor pins
+const int left_ctrl = 2;
+const int left_pwm = 6;
+const int right_ctrl = 4;
+const int right_pwm = 5;
+
+// Ultrasonic sensor pins
+#define TRIG_PIN 12
+#define ECHO_PIN 13
+
+long distance1, distance2, distance3;
+
+const int servopin = 10;
 Servo myservo;
-const int left_ctrl = 2;//define direction control pin of A motor
-const int left_pwm = 6;//define PWM control pin of A motor
-const int right_ctrl = 4;//define direction control pin of B motor
-const int right_pwm = 5;//define PWM control pin of B motor
-#define TRIG_PIN 12// set the signal input of ultrasonic sensor to D12 
-#define ECHO_PIN 13//set the signal output of ultrasonic sensor to D13 
-long distance1,distance2,distance3;//define three distance
-const int servopin = 10;//set the pin of servo to D10 
-int myangle;
-int pulsewidth;
-int val;
+
+// Initialize 8x8 LED matrix (I2C address 0x70 is default for HT16K33)
+Adafruit_8x8matrix matrix = Adafruit_8x8matrix();
+
+// Define "!" bitmap for 8x8 matrix
+const uint8_t exclamation[] = {
+  0b00000000,
+  0b00110000,
+  0b11111100,
+  0b11111100,
+  0b11111100,
+  0b11111100,
+  0b00110000,
+  0b00000000
+};
 
 void setup() {
-  Serial.begin(9600);//open serial monitor and set baud rate to 9600
-  pinMode(left_ctrl,OUTPUT);//set direction control pin of A motor to OUTPUT
-  pinMode(left_pwm,OUTPUT);//set PWM control pin of A motor to OUTPUT
-  pinMode(right_ctrl,OUTPUT);//set direction control pin of B motor to OUTPUT
-  pinMode(right_pwm,OUTPUT);//set PWM control pin of B motor to OUTPUT
- myservo.write (90);//the angle of servo is 90 degree
+  Serial.begin(9600);
+
+  pinMode(left_ctrl, OUTPUT);
+  pinMode(left_pwm, OUTPUT);
+  pinMode(right_ctrl, OUTPUT);
+  pinMode(right_pwm, OUTPUT);
+
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
+  myservo.attach(servopin);
+  myservo.write(90);
   delay(300);
+
+  // Initialize the matrix
+  matrix.begin(0x70); // default I2C address
+  matrix.clear();
+  matrix.writeDisplay();
 }
- 
-void loop()
- {
-  avoid();//run the main program
+
+void loop() {
+  distance1 = Distance();
+  Serial.print("Front Distance: ");
+  Serial.println(distance1);
+
+  avoid();
 }
 
-void avoid()
-{
- 
+void avoid() {
+  if ((distance1 < 10) && (distance1 != 0)) {
+    Stop();
+    displayExclamation();
+    delay(100);
 
-  if((distance1 < 10)&&(distance1 != 0))//if the distance is greater than 0 and less than 10  
+    myservo.write(180);
+    delay(300);
+    distance2 = Distance();
+    Serial.print("Left Distance: ");
+    Serial.println(distance2);
 
-  {
-    Stop();//stop
-    
-    delay(100);
-    myservo.write (180);//servo rotates to 180°
+    myservo.write(0);
+    delay(300);
+    distance3 = Distance();
+    Serial.print("Right Distance: ");
+    Serial.println(distance3);
+
+    myservo.write(90);
     delay(200);
-    distance2=Distance();//measure the distance
-    delay(100);
-    myservo.write (0);//rotate to 0 degree
-    delay(200);
-    distance3=Distance();//measure the distance
-    delay(100);
-    if(distance2 > distance3)//compare the distance, if left distance is more than right distance
-    {
-      car_left();//turn left
-       
-      myservo.write (90);//servo rotates to 90 degree
-      //delay(50);
-      //show forward pattern
+
+    if (distance2 > distance3) {
+      car_left();
+    } else {
+      car_right();
     }
-    else//if the right distance is greater than the left
-    {
-      car_right();//turn right
-          myservo.write (90);
-      //delay(50);
-        //show forward pattern
+  } else {
+    clearDisplay();
+    car_front();
+  }
+}
+
+long Distance() {
+  long duration, distanceCm;
+
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  duration = pulseIn(ECHO_PIN, HIGH, 30000);
+
+  if (duration == 0) {
+    return 0;
+  }
+
+  distanceCm = duration * 0.034 / 2;
+  return distanceCm;
+}
+
+void displayExclamation() {
+  matrix.clear();
+  for (uint8_t i = 0; i < 8; i++) {
+    // Draw each row of the bitmap
+    for (uint8_t j = 0; j < 8; j++) {
+      if (exclamation[i] & (1 << j)) {
+        matrix.drawPixel(j, i, LED_ON);
+      }
     }
   }
-  else//otherwise
-  {
-    car_front();//go forward
-   
+  matrix.writeDisplay();
 }
 
-void servopulse(int servopin,int myangle)//the running angle of servo
-{
-  for(int i=0; i<20; i++)
-  {
-    pulsewidth = (myangle*11)+500;
-    digitalWrite(servopin,HIGH);
-    delayMicroseconds(pulsewidth);
-    digitalWrite(servopin,LOW);
-    delay(20-pulsewidth/1000);
-  }
-  
+void clearDisplay() {
+  matrix.clear();
+  matrix.writeDisplay();
 }
 
-void car_front()//car goes forward
-{
-  digitalWrite(left_ctrl,LOW);
-  analogWrite(left_pwm,200);
-  digitalWrite(right_ctrl,LOW);
-  analogWrite(right_pwm,200);
-}
-void car_back()//go back
-{
-  digitalWrite(left_ctrl,HIGH);
-  analogWrite(left_pwm,200);
-  digitalWrite(right_ctrl,HIGH);
-  analogWrite(right_pwm,200);
-}
-void car_left()//car turns left
-{
-  digitalWrite(left_ctrl,HIGH);
-  analogWrite(left_pwm,200);
-  digitalWrite(right_ctrl,LOW);
-  analogWrite(right_pwm,200);
-}
-void car_right()//car turns right
-{
-  digitalWrite(left_ctrl,LOW);
-  analogWrite(left_pwm,200);
-  digitalWrite(right_ctrl,HIGH);
-  analogWrite(right_pwm,200);
+void car_front() {
+  digitalWrite(left_ctrl, LOW);
+  analogWrite(left_pwm, 200);
+  digitalWrite(right_ctrl, LOW);
+  analogWrite(right_pwm, 200);
 }
 
-void Stop()//stop
-{
-   analogWrite(left_pwm,0);
-  analogWrite(right_pwm,0);
+void car_back() {
+  digitalWrite(left_ctrl, HIGH);
+  analogWrite(left_pwm, 200);
+  digitalWrite(right_ctrl, HIGH);
+  analogWrite(right_pwm, 200);
+}
+
+void car_left() {
+  digitalWrite(left_ctrl, HIGH);
+  analogWrite(left_pwm, 200);
+  digitalWrite(right_ctrl, LOW);
+  analogWrite(right_pwm, 200);
+}
+
+void car_right() {
+  digitalWrite(left_ctrl, LOW);
+  analogWrite(left_pwm, 200);
+  digitalWrite(right_ctrl, HIGH);
+  analogWrite(right_pwm, 200);
+}
+
+void Stop() {
+  analogWrite(left_pwm, 0);
+  analogWrite(right_pwm, 0);
 }
